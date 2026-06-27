@@ -33,7 +33,7 @@
 #include "ti_msp_dl_config.h"
 #include "motor.h"
 #include "delay.h"
-#include "grayscale_sensor.h"
+
 
 
 int main(void)

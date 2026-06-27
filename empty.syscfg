@@ -11,7 +11,6 @@
  */
 const GPIO    = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO1   = GPIO.addInstance();
-const GPIO2   = GPIO.addInstance();
 const PWM     = scripting.addModule("/ti/driverlib/PWM", {}, false);
 const PWM1    = PWM.addInstance();
 const SYSCTL  = scripting.addModule("/ti/driverlib/SYSCTL");
@@ -28,18 +27,6 @@ GPIO1.associatedPins[0].$name       = "PIN_22";
 GPIO1.associatedPins[0].assignedPin = "22";
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
-
-GPIO2.$name                         = "Grays";
-GPIO2.port                          = "PORTA";
-GPIO2.associatedPins.create(4);
-GPIO2.associatedPins[0].$name       = "PIN_0";
-GPIO2.associatedPins[0].pin.$assign = "PA14";
-GPIO2.associatedPins[1].$name       = "PIN_1";
-GPIO2.associatedPins[1].pin.$assign = "PA15";
-GPIO2.associatedPins[2].$name       = "PIN_2";
-GPIO2.associatedPins[2].pin.$assign = "PA16";
-GPIO2.associatedPins[3].$name       = "PIN_3";
-GPIO2.associatedPins[3].direction   = "INPUT";
 
 PWM1.$name                   = "PWM_0";
 PWM1.clockPrescale           = 25;
@@ -75,7 +62,6 @@ GPIO1.associatedPins[0].pin.$suggestSolution = "PB22";
 Board.peripheral.$suggestSolution            = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution   = "PA20";
 Board.peripheral.swdioPin.$suggestSolution   = "PA19";
-GPIO2.associatedPins[3].pin.$suggestSolution = "PA17";
 PWM1.peripheral.ccp0Pin.$suggestSolution     = "PA12";
 PWM1.peripheral.ccp1Pin.$suggestSolution     = "PA13";
 UART1.peripheral.$suggestSolution            = "UART0";
