@@ -98,6 +98,26 @@ extern "C" {
 
 
 
+/* Defines for UART_0 */
+#define UART_0_INST                                                        UART0
+#define UART_0_INST_FREQUENCY                                           32000000
+#define UART_0_INST_IRQHandler                                  UART0_IRQHandler
+#define UART_0_INST_INT_IRQN                                      UART0_INT_IRQn
+#define GPIO_UART_0_RX_PORT                                                GPIOA
+#define GPIO_UART_0_TX_PORT                                                GPIOA
+#define GPIO_UART_0_RX_PIN                                        DL_GPIO_PIN_11
+#define GPIO_UART_0_TX_PIN                                        DL_GPIO_PIN_10
+#define GPIO_UART_0_IOMUX_RX                                     (IOMUX_PINCM22)
+#define GPIO_UART_0_IOMUX_TX                                     (IOMUX_PINCM21)
+#define GPIO_UART_0_IOMUX_RX_FUNC                      IOMUX_PINCM22_PF_UART0_RX
+#define GPIO_UART_0_IOMUX_TX_FUNC                      IOMUX_PINCM21_PF_UART0_TX
+#define UART_0_BAUD_RATE                                                (115200)
+#define UART_0_IBRD_32_MHZ_115200_BAUD                                      (17)
+#define UART_0_FBRD_32_MHZ_115200_BAUD                                      (23)
+
+
+
+
 
 /* Port definition for Pin Group LED */
 #define LED_PORT                                                         (GPIOB)
@@ -105,6 +125,21 @@ extern "C" {
 /* Defines for PIN_22: GPIOB.22 with pinCMx 50 on package pin 21 */
 #define LED_PIN_22_PIN                                          (DL_GPIO_PIN_22)
 #define LED_PIN_22_IOMUX                                         (IOMUX_PINCM50)
+/* Port definition for Pin Group Grays */
+#define Grays_PORT                                                       (GPIOA)
+
+/* Defines for PIN_0: GPIOA.14 with pinCMx 36 on package pin 7 */
+#define Grays_PIN_0_PIN                                         (DL_GPIO_PIN_14)
+#define Grays_PIN_0_IOMUX                                        (IOMUX_PINCM36)
+/* Defines for PIN_1: GPIOA.15 with pinCMx 37 on package pin 8 */
+#define Grays_PIN_1_PIN                                         (DL_GPIO_PIN_15)
+#define Grays_PIN_1_IOMUX                                        (IOMUX_PINCM37)
+/* Defines for PIN_2: GPIOA.16 with pinCMx 38 on package pin 9 */
+#define Grays_PIN_2_PIN                                         (DL_GPIO_PIN_16)
+#define Grays_PIN_2_IOMUX                                        (IOMUX_PINCM38)
+/* Defines for PIN_3: GPIOA.17 with pinCMx 39 on package pin 10 */
+#define Grays_PIN_3_PIN                                         (DL_GPIO_PIN_17)
+#define Grays_PIN_3_IOMUX                                        (IOMUX_PINCM39)
 
 
 
@@ -116,6 +151,7 @@ void SYSCFG_DL_initPower(void);
 void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_0_init(void);
+void SYSCFG_DL_UART_0_init(void);
 
 void SYSCFG_DL_SYSTICK_init(void);
 
