@@ -15,6 +15,8 @@ const PWM     = scripting.addModule("/ti/driverlib/PWM", {}, false);
 const PWM1    = PWM.addInstance();
 const SYSCTL  = scripting.addModule("/ti/driverlib/SYSCTL");
 const SYSTICK = scripting.addModule("/ti/driverlib/SYSTICK");
+const UART    = scripting.addModule("/ti/driverlib/UART", {}, false);
+const UART1   = UART.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -44,6 +46,13 @@ SYSTICK.periodEnable  = true;
 SYSTICK.period        = 32;
 SYSTICK.systickEnable = true;
 
+UART1.$name                    = "UART_0";
+UART1.targetBaudRate           = 115200;
+UART1.peripheral.rxPin.$assign = "PA11";
+UART1.peripheral.txPin.$assign = "PA10";
+UART1.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric2";
+UART1.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric3";
+
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
  * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
@@ -55,3 +64,4 @@ Board.peripheral.swclkPin.$suggestSolution   = "PA20";
 Board.peripheral.swdioPin.$suggestSolution   = "PA19";
 PWM1.peripheral.ccp0Pin.$suggestSolution     = "PA12";
 PWM1.peripheral.ccp1Pin.$suggestSolution     = "PA13";
+UART1.peripheral.$suggestSolution            = "UART0";
