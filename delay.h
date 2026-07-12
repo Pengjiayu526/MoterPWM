@@ -1,11 +1,9 @@
 #ifndef _DELAY_H
 #define _DELAY_H
 
-#include <stdint.h>
 #include "ti_msp_dl_config.h"
 
-void delay_us(unsigned long __us);
-void delay_ms(unsigned long ms);
-
+void delay_ms(uint32_t ms);
+void delay_us(uint32_t us);
 
 #endif

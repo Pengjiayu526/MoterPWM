@@ -14,8 +14,9 @@ ORDERED_OBJS += \
 "./empty.o" \
 "./ti_msp_dl_config.o" \
 "./startup_mspm0g350x_ticlang.o" \
-"./grayscale_sensor.o" \
+"./encoder.o" \
 "./motor.o" \
+"./usart.o" \
 $(GEN_CMDS__FLAG) \
 -Wl,-ldevice.cmd.genlibs \
 -Wl,-llibc.a \
@@ -119,28 +120,28 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-MoterPWM.out 
+MoterNEW_Encode.out 
 
 EXE_OUTPUTS__QUOTED += \
-"MoterPWM.out" 
+"MoterNEW_Encode.out" 
 
 
 # All Target
 all: $(OBJS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "MoterPWM.out"
+	@$(MAKE) --no-print-directory -Onone "MoterNEW_Encode.out"
 
 # Tool invocations
-MoterPWM.out: $(OBJS) $(GEN_CMDS)
+MoterNEW_Encode.out: $(OBJS) $(GEN_CMDS)
 	@echo 'Arm Linker - building target: "$@"'
-	"D:/ti/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/bin/tiarmclang.exe" @"device.opt"  -march=thumbv6m -mcpu=cortex-m0plus -mfloat-abi=soft -mlittle-endian -mthumb -O2 -gdwarf-3 -Wall -Wl,-m"MoterPWM.map" -Wl,-i"D:/ti/mspm0_sdk_2_10_00_04/source" -Wl,-i"C:/Users/hp/workspace_ccstheia/MoterPWM" -Wl,-i"C:/Users/hp/workspace_ccstheia/MoterPWM/Debug/syscfg" -Wl,-i"D:/ti/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/lib" -Wl,--diag_wrap=off -Wl,--display_error_number -Wl,--warn_sections -Wl,--xml_link_info="MoterPWM_linkInfo.xml" -Wl,--rom_model -o "MoterPWM.out" $(ORDERED_OBJS)
+	"D:/ti/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/bin/tiarmclang.exe" @"device.opt"  -march=thumbv6m -mcpu=cortex-m0plus -mfloat-abi=soft -mlittle-endian -mthumb -O2 -gdwarf-3 -Wall -Wl,-m"MoterNEW_Encode.map" -Wl,-i"D:/ti/mspm0_sdk_2_10_00_04/source" -Wl,-i"C:/Users/hp/workspace_ccstheia/MoterNEW_Encode" -Wl,-i"C:/Users/hp/workspace_ccstheia/MoterNEW_Encode/Debug/syscfg" -Wl,-i"D:/ti/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/lib" -Wl,--diag_wrap=off -Wl,--display_error_number -Wl,--warn_sections -Wl,--xml_link_info="MoterNEW_Encode_linkInfo.xml" -Wl,--rom_model -o "MoterNEW_Encode.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 
 # Other Targets
 clean:
 	-$(RM) $(GEN_MISC_FILES__QUOTED)$(GEN_FILES__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "delay.o" "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "grayscale_sensor.o" "motor.o" 
-	-$(RM) "delay.d" "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "grayscale_sensor.d" "motor.d" 
+	-$(RM) "delay.o" "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "encoder.o" "motor.o" "usart.o" 
+	-$(RM) "delay.d" "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "encoder.d" "motor.d" "usart.d" 
 	-@echo ' '
 
 .PHONY: all clean dependents

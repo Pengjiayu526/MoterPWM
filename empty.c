@@ -33,29 +33,100 @@
 #include "ti_msp_dl_config.h"
 #include "motor.h"
 #include "delay.h"
-
-
+#include "encoder.h"
+#include "usart.h"
 
 int main(void)
 {
-    SYSCFG_DL_init();       /* 系统及外设初始化 (GPIO, PWM, 时钟等) */
+    uint32_t leftSpeed, rightSpeed;
+    uint32_t leftRPM, rightRPM;
+
+    SYSCFG_DL_init();       /* 系统及外设初始化 (GPIO, PWM, 时钟, 编码器, 定时器, 串口) */
     Motor_Init();           /* 启动 PWM 输出 */
+    Encoder_Init();         /* 使能编码器中断 */
+    USART_Init();           /* 使能串口中断 + printf 重定向 */
+
+    printf("\r\n==== Motor + Encoder Demo (13-line, 1:28) ====\r\n\r\n");
 
     while (1) {
-        /* 两轮 50% 占空比前进 */
+        /* 两轮 50% 前进 */
         Motor_SetSpeed(50, 50);
-        delay_ms(2000);     /* 持续 2 秒 */
+        delay_ms(2000);
+        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
+        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
+        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
+        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
+        printf("FWD 50%%  | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
+               leftSpeed, leftRPM, rightSpeed, rightRPM);
 
         /* 加速到 80% */
         Motor_SetSpeed(80, 80);
         delay_ms(2000);
+        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
+        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
+        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
+        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
+        printf("FWD 80%%  | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
+               leftSpeed, leftRPM, rightSpeed, rightRPM);
 
-        /* 左转: 左轮30%, 右轮80% */
+        /* 左转: 左轮慢(30%), 右轮快(80%) */
         Motor_SetSpeed(30, 80);
         delay_ms(1000);
+        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
+        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
+        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
+        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
+        printf("L-TURN   | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
+               leftSpeed, leftRPM, rightSpeed, rightRPM);
 
         /* 停止 1 秒 */
-        Motor_Stop();
+        Motor_SetSpeed(0, 0);
         delay_ms(1000);
+        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
+        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
+        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
+        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
+        printf("STOP     | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
+               leftSpeed, leftRPM, rightSpeed, rightRPM);
+
+        /* 后退 40% */
+        Motor_SetSpeed(-40, -40);
+        delay_ms(1500);
+        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
+        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
+        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
+        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
+        printf("REV 40%%  | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
+               leftSpeed, leftRPM, rightSpeed, rightRPM);
+
+        /* 刹车 */
+        Motor_Brake();
+        delay_ms(500);
+        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
+        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
+        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
+        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
+        printf("BRAKE    | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
+               leftSpeed, leftRPM, rightSpeed, rightRPM);
+
+        /* 原地右转: 左轮前进, 右轮后退 */
+        Motor_SetSpeed(40, -40);
+        delay_ms(800);
+        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
+        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
+        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
+        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
+        printf("R-SPIN   | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
+               leftSpeed, leftRPM, rightSpeed, rightRPM);
+
+        /* 停止 */
+        Motor_SetSpeed(0, 0);
+        delay_ms(1000);
+        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
+        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
+        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
+        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
+        printf("STOP     | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n\n",
+               leftSpeed, leftRPM, rightSpeed, rightRPM);
     }
 }
