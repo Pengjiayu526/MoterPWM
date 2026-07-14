@@ -171,11 +171,11 @@ static void Motor_SetDirectionLeft(uint8_t in1, uint8_t in2)
         DL_GPIO_clearPins(GPIOB, BIN_BIN1_PIN);
     }
 
-    /* BIN2 = PB4, 端口 GPIOB */
+    /* BIN2 = PA1, 端口 GPIOA */
     if (in2) {
-        DL_GPIO_setPins(GPIOB, BIN_BIN2_PIN);
+        DL_GPIO_setPins(GPIOA, BIN_BIN2_PIN);
     } else {
-        DL_GPIO_clearPins(GPIOB, BIN_BIN2_PIN);
+        DL_GPIO_clearPins(GPIOA, BIN_BIN2_PIN);
     }
 }
 

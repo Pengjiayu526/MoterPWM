@@ -1,6 +1,6 @@
 # FIXED
 
-encoder.o: ../encoder.c ../encoder.h \
+encoder.o: ../encoder.c ../encoder.h ../speed_control.h \
  ti_msp_dl_config.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h \
@@ -85,6 +85,7 @@ encoder.o: ../encoder.c ../encoder.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h
 ../encoder.h:
+../speed_control.h:
 ti_msp_dl_config.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h:

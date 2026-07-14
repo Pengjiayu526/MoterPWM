@@ -1,39 +1,37 @@
 /**
  * @file  encoder.c
- * @brief 双路编码器速度测量 — GPIO 中断计脉冲 + 定时器周期性算速度
+ * @brief 双路编码器速度测量 — 参照 11_PID_car 架构 + 三级排查调试
  *
- * 架构 (参考 hw_encoder / mid_timer 模式):
- * - GPIO ISR (GROUP1_IRQHandler)          → 实时累加 temp_count (A通道上升沿)
- * - Timer ISR (TIMER_TICK_INST_IRQHandler) → 每 20ms: speed = temp_count × 50,
- *                                             temp_count = 0
- * - API (Encoder_GetSpeed)                → 主循环安全读取 speed
- *
- * 仅测速，不判断方向 — 只用 A 通道上升沿计数。
- *
- * GPIO 和定时器外设初始化由 SysConfig 完成:
- * - A_Encode (AA=PA0, AB=PA1): SYSCFG_DL_GPIO_init()
- * - B_Encode (BA=PA8, BB=PA9): SYSCFG_DL_GPIO_init()
- * - TIMER_TICK (TIMA0, 20ms):  SYSCFG_DL_TIMER_TICK_init()
- * 本模块仅负责 NVIC 使能和中断处理。
+ * GPIO ISR: DL_GPIO_getPendingInterrupt → switch/case IIDX
+ * Timer ISR: DL_Timer_getPendingInterrupt → switch/case ZERO
  */
 
 #include "encoder.h"
+#include "speed_control.h"
 #include "ti_msp_dl_config.h"
 
 /*===========================================================================
- * 编码器运行时数据 (参考 ENCODER_RES 结构)
- *
- * temp_count: volatile, GPIO ISR 中实时累加
- * speed:      非 volatile, Timer ISR 中定期快照, 主循环安全读取
+ * 调试计数器 — 只增不减，用于三级排查
  *===========================================================================*/
 
-typedef struct {
-    volatile int32_t  temp_count;   /**< 实时脉冲计数 (GPIO ISR 写入) */
-    uint32_t          speed;        /**< 当前速度 pulses/sec (Timer ISR 更新) */
-} Encoder_Data;
+volatile uint32_t g_enc_edge_left  = 0;   /**< PA12 边沿触发次数 */
+volatile uint32_t g_enc_edge_right = 0;   /**< PA8 边沿触发次数 */
+volatile uint32_t g_timer_ticks    = 0;   /**< TIMA0 ZERO 中断次数 */
+volatile uint32_t g_group1_entry   = 0;   /**< GROUP1 ISR 入口次数 */
+volatile uint32_t g_gpioa_entry    = 0;   /**< GPIOA 中断源命中次数 */
+volatile uint32_t g_gpio_pending   = 0;   /**< 最近一次 GPIO pending 值 */
 
-static Encoder_Data g_leftEncoder;   /**< 左轮编码器 (A_Encode) */
-static Encoder_Data g_rightEncoder;  /**< 右轮编码器 (B_Encode) */
+/*===========================================================================
+ * 运行时数据
+ *===========================================================================*/
+
+/** @brief 20ms 窗口内的脉冲计数 (GPIO ISR 累加, Timer ISR 清零) */
+static volatile uint32_t g_speed_counter_left  = 0;
+static volatile uint32_t g_speed_counter_right = 0;
+
+/** @brief 速度快照 pps (Timer ISR 更新, 主循环通过 Encoder_GetSpeed 读取) */
+static volatile uint32_t g_speed_left  = 0;
+static volatile uint32_t g_speed_right = 0;
 
 /*===========================================================================
  * 公有函数
@@ -41,94 +39,133 @@ static Encoder_Data g_rightEncoder;  /**< 右轮编码器 (B_Encode) */
 
 void Encoder_Init(void)
 {
-    /*
-     * GPIO 和定时器外设已由 SYSCFG_DL_init() 配置完毕。
-     * 此处参照 hw_encoder / mid_timer 的模式，仅使能 NVIC 中断线。
-     */
+    uint32_t encoderPins =
+        A_Encode_AA_PIN |
+        B_Encode_BA_PIN;
 
-    /* GPIOA 中断 — 编码器脉冲 (PA0, PA8) */
+    /*
+     * SysConfig 已经使能了引脚中断，
+     * 这里再次显式使能，排除生成配置未更新的问题。
+     */
+    DL_GPIO_disableInterrupt(GPIOA, encoderPins);
+    DL_GPIO_clearInterruptStatus(GPIOA, encoderPins);
+    DL_GPIO_enableInterrupt(GPIOA, encoderPins);
+
+    /*
+     * 左右编码器都在 GPIOA，使能 GROUP1 / GPIOA_INT_IRQn。
+     */
     NVIC_ClearPendingIRQ(GPIOA_INT_IRQn);
     NVIC_EnableIRQ(GPIOA_INT_IRQn);
 
-    /* TIMA0 中断 — 速度刷新 (20ms 周期) */
+    /* TIMA0 定时器中断 — 速度刷新 */
     NVIC_ClearPendingIRQ(TIMER_TICK_INST_INT_IRQN);
     NVIC_EnableIRQ(TIMER_TICK_INST_INT_IRQN);
 }
 
 uint32_t Encoder_GetSpeed(Encoder_Select encoder)
 {
-    /* 32-bit 读取在 Cortex-M0+ 上是原子的, 无需关中断 */
     if (encoder == ENCODER_LEFT) {
-        return g_leftEncoder.speed;
+        return g_speed_left;
     } else {
-        return g_rightEncoder.speed;
+        return g_speed_right;
     }
 }
 
 void Encoder_Reset(Encoder_Select encoder)
 {
     if (encoder == ENCODER_LEFT) {
-        g_leftEncoder.temp_count = 0;
-        g_leftEncoder.speed = 0;
+        g_speed_counter_left = 0;
+        g_speed_left         = 0;
     } else {
-        g_rightEncoder.temp_count = 0;
-        g_rightEncoder.speed = 0;
+        g_speed_counter_right = 0;
+        g_speed_right         = 0;
     }
 }
 
 /*===========================================================================
- * 中断处理
+ * GPIOA 中断
+ *
+ * 三层排查信息:
+ *   g_group1_entry  — GROUP1 ISR 是否被调用
+ *   g_gpioa_entry   — GPIOA 是否确认为中断源
+ *   g_gpio_pending  — GPIOA MIS 寄存器原始值 (看哪些引脚有中断)
+ *   g_enc_edge_*    — 左右编码器各自触发次数
  *===========================================================================*/
 
-/**
- * @brief GPIOA 中断 — 编码器脉冲计数
- *
- * PA0 (A_Encode AA) 上升沿 → 左轮 temp_count++
- * PA8 (B_Encode BA) 上升沿 → 右轮 temp_count++
- *
- * 参照 hw_encoder.c 中 GROUP1_IRQHandler 的处理流程:
- * 读中断状态 → 判断触发源 → 累加计数 → 清除中断标志
- */
 void GROUP1_IRQHandler(void)
 {
-    uint32_t pending;
+    uint32_t groupPending;
+    uint32_t gpioPending;
+    uint32_t encoderPins =
+        A_Encode_AA_PIN |
+        B_Encode_BA_PIN;
 
-    pending = DL_GPIO_getEnabledInterruptStatus(A_Encode_PORT,
-        A_Encode_AA_PIN | B_Encode_BA_PIN);
+    g_group1_entry++;
 
-    /* 左轮编码器脉冲 (PA0 上升沿) */
-    if (pending & A_Encode_AA_PIN) {
-        g_leftEncoder.temp_count++;
+    /* 读取 GROUP1 中当前最高优先级的中断源 */
+    groupPending =
+        DL_Interrupt_getPendingGroup(DL_INTERRUPT_GROUP_1);
+
+    /* 确认是 GPIOA 触发了 GROUP1 */
+    if (groupPending == DL_INTERRUPT_GROUP1_IIDX_GPIOA)
+    {
+        g_gpioa_entry++;
+
+        gpioPending =
+            DL_GPIO_getEnabledInterruptStatus(
+                GPIOA,
+                encoderPins);
+
+        g_gpio_pending = gpioPending;
+
+        /* 左编码器 AA = PA12 */
+        if ((gpioPending & A_Encode_AA_PIN) != 0U)
+        {
+            g_enc_edge_left++;
+            g_speed_counter_left++;
+        }
+
+        /* 右编码器 BA = PA8 */
+        if ((gpioPending & B_Encode_BA_PIN) != 0U)
+        {
+            g_enc_edge_right++;
+            g_speed_counter_right++;
+        }
+
+        /* 清除已处理的中断标志 */
+        DL_GPIO_clearInterruptStatus(
+            GPIOA,
+            gpioPending & encoderPins);
     }
-
-    /* 右轮编码器脉冲 (PA8 上升沿) */
-    if (pending & B_Encode_BA_PIN) {
-        g_rightEncoder.temp_count++;
-    }
-
-    /* 清除已处理的中断标志 */
-    DL_GPIO_clearInterruptStatus(A_Encode_PORT,
-        A_Encode_AA_PIN | B_Encode_BA_PIN);
 }
 
-/**
- * @brief TIMA0 中断 — 每 20ms 刷新一次速度
- *
- * 参照 hw_timer.c 中 TIMER_TICK_INST_IRQHandler 的处理流程:
- * 检查 ZERO 中断 → 快照 temp_count → 换算速度 → 清零 temp_count
- */
+/*===========================================================================
+ * TIMA0 中断 — 每 20ms 快照 speed_counter → 换算 speed → 清零 counter
+ *===========================================================================*/
+
 void TIMER_TICK_INST_IRQHandler(void)
 {
-    if (DL_TimerA_getPendingInterrupt(TIMER_TICK_INST) == DL_TIMER_IIDX_ZERO) {
+    switch (DL_Timer_getPendingInterrupt(TIMER_TICK_INST))
+    {
+    case DL_TIMER_IIDX_ZERO:
+        g_timer_ticks++;
 
-        /* 左轮: 快照脉冲数 → 换算速度 → 清零 */
-        g_leftEncoder.speed = (uint32_t)g_leftEncoder.temp_count
-                            * ENCODER_SPEED_FACTOR;
-        g_leftEncoder.temp_count = 0;
+        /* pps = counter × (1000ms / 20ms) = counter × 50 */
+        g_speed_left  = g_speed_counter_left  * (1000U / ENCODER_SAMPLE_MS);
+        g_speed_right = g_speed_counter_right * (1000U / ENCODER_SAMPLE_MS);
 
-        /* 右轮: 快照脉冲数 → 换算速度 → 清零 */
-        g_rightEncoder.speed = (uint32_t)g_rightEncoder.temp_count
-                             * ENCODER_SPEED_FACTOR;
-        g_rightEncoder.temp_count = 0;
+        /* 清零窗口计数器, 开始下一个 20ms 周期 */
+        g_speed_counter_left  = 0;
+        g_speed_counter_right = 0;
+
+        /*
+         * PI 速度闭环更新 — 必须在速度计算之后调用。
+         * 该函数内部调用 Motor_SetSpeed()，主循环不应再直接调用。
+         */
+        SpeedControl_Update(g_speed_right, g_speed_left);
+        break;
+
+    default:
+        break;
     }
 }

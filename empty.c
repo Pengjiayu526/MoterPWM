@@ -2,32 +2,15 @@
  * Copyright (c) 2021, Texas Instruments Incorporated
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * 左右轮独立 PI 速度闭环测试程序
  *
- * *  Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ * 架构:
+ *   main() → 设置目标速度 + 串口打印 (200ms 周期)
+ *   Timer ISR (20ms) → 编码器测速 → SpeedControl_Update() → Motor_SetSpeed()
  *
- * *  Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * *  Neither the name of Texas Instruments Incorporated nor the names of
- *    its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 注意:
+ *   - 主循环不应再直接调用 Motor_SetSpeed()，PWM 全部由 PI 控制器在 ISR 中更新
+ *   - 串口打印周期建议 200~500ms，不要在 20ms ISR 中打印
  */
 
 #include "ti_msp_dl_config.h"
@@ -35,98 +18,55 @@
 #include "delay.h"
 #include "encoder.h"
 #include "usart.h"
+#include "speed_control.h"
+#include <stdio.h>
+
+//重定向fputc函数
+int fputc(int ch, FILE *stream)
+{
+    while( DL_UART_isBusy(UART_0_INST) == true );
+    DL_UART_Main_transmitData(UART_0_INST, ch);
+    return ch;
+}
+
+//重定向fputs函数
+int fputs(const char* restrict s, FILE* restrict stream) {
+
+    uint16_t char_len=0;
+    while(*s!=0)
+    {
+        while( DL_UART_isBusy(UART_0_INST) == true );
+        DL_UART_Main_transmitData(UART_0_INST, *s++);
+        char_len++;
+    }
+    return char_len;
+}
+int puts(const char* _ptr)
+{
+ return 0;
+}
 
 int main(void)
 {
-    uint32_t leftSpeed, rightSpeed;
-    uint32_t leftRPM, rightRPM;
+    
 
-    SYSCFG_DL_init();       /* 系统及外设初始化 (GPIO, PWM, 时钟, 编码器, 定时器, 串口) */
-    Motor_Init();           /* 启动 PWM 输出 */
-    Encoder_Init();         /* 使能编码器中断 */
-    USART_Init();           /* 使能串口中断 + printf 重定向 */
+    SYSCFG_DL_init();
+    Motor_Init();
+    Encoder_Init();
+    USART_Init();
+    SpeedControl_Init();
 
-    printf("\r\n==== Motor + Encoder Demo (13-line, 1:28) ====\r\n\r\n");
+    __enable_irq();
 
-    while (1) {
-        /* 两轮 50% 前进 */
-        Motor_SetSpeed(50, 50);
-        delay_ms(2000);
-        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
-        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
-        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
-        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
-        printf("FWD 50%%  | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
-               leftSpeed, leftRPM, rightSpeed, rightRPM);
+    
+   
+   //SpeedControl_SetTargetPPS(800, 800);
+  while (1)
+    {
+        
+        Grayscale_Print();
 
-        /* 加速到 80% */
-        Motor_SetSpeed(80, 80);
-        delay_ms(2000);
-        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
-        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
-        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
-        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
-        printf("FWD 80%%  | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
-               leftSpeed, leftRPM, rightSpeed, rightRPM);
-
-        /* 左转: 左轮慢(30%), 右轮快(80%) */
-        Motor_SetSpeed(30, 80);
-        delay_ms(1000);
-        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
-        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
-        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
-        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
-        printf("L-TURN   | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
-               leftSpeed, leftRPM, rightSpeed, rightRPM);
-
-        /* 停止 1 秒 */
-        Motor_SetSpeed(0, 0);
-        delay_ms(1000);
-        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
-        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
-        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
-        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
-        printf("STOP     | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
-               leftSpeed, leftRPM, rightSpeed, rightRPM);
-
-        /* 后退 40% */
-        Motor_SetSpeed(-40, -40);
-        delay_ms(1500);
-        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
-        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
-        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
-        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
-        printf("REV 40%%  | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
-               leftSpeed, leftRPM, rightSpeed, rightRPM);
-
-        /* 刹车 */
-        Motor_Brake();
-        delay_ms(500);
-        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
-        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
-        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
-        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
-        printf("BRAKE    | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
-               leftSpeed, leftRPM, rightSpeed, rightRPM);
-
-        /* 原地右转: 左轮前进, 右轮后退 */
-        Motor_SetSpeed(40, -40);
-        delay_ms(800);
-        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
-        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
-        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
-        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
-        printf("R-SPIN   | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n",
-               leftSpeed, leftRPM, rightSpeed, rightRPM);
-
-        /* 停止 */
-        Motor_SetSpeed(0, 0);
-        delay_ms(1000);
-        leftSpeed  = Encoder_GetSpeed(ENCODER_LEFT);
-        rightSpeed = Encoder_GetSpeed(ENCODER_RIGHT);
-        leftRPM    = Encoder_GetOutputRPM(ENCODER_LEFT);
-        rightRPM   = Encoder_GetOutputRPM(ENCODER_RIGHT);
-        printf("STOP     | L:%4lu pps %4lu RPM | R:%4lu pps %4lu RPM\r\n\n",
-               leftSpeed, leftRPM, rightSpeed, rightRPM);
+        delay_ms(200);
+      
     }
 }

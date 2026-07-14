@@ -84,7 +84,7 @@ empty.o: ../empty.c \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/dl_wwdt.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h \
- ../motor.h ../delay.h ../encoder.h ../usart.h
+ ../motor.h ../delay.h ../encoder.h ../usart.h ../speed_control.h
 ti_msp_dl_config.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h:
@@ -172,3 +172,4 @@ D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h:
 ../delay.h:
 ../encoder.h:
 ../usart.h:
+../speed_control.h:
