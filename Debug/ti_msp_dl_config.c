@@ -42,6 +42,7 @@
 
 DL_TimerG_backupConfig gPWM_0Backup;
 DL_TimerA_backupConfig gTIMER_TICKBackup;
+DL_TimerG_backupConfig gLINE_TIMERBackup;
 
 /*
  *  ======== SYSCFG_DL_init ========
@@ -55,10 +56,12 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     SYSCFG_DL_SYSCTL_init();
     SYSCFG_DL_PWM_0_init();
     SYSCFG_DL_TIMER_TICK_init();
+    SYSCFG_DL_LINE_TIMER_init();
     SYSCFG_DL_UART_0_init();
     /* Ensure backup structures have no valid state */
 	gPWM_0Backup.backupRdy 	= false;
 	gTIMER_TICKBackup.backupRdy 	= false;
+	gLINE_TIMERBackup.backupRdy 	= false;
 
 
 }
@@ -72,6 +75,7 @@ SYSCONFIG_WEAK bool SYSCFG_DL_saveConfiguration(void)
 
 	retStatus &= DL_TimerG_saveConfiguration(PWM_0_INST, &gPWM_0Backup);
 	retStatus &= DL_TimerA_saveConfiguration(TIMER_TICK_INST, &gTIMER_TICKBackup);
+	retStatus &= DL_TimerG_saveConfiguration(LINE_TIMER_INST, &gLINE_TIMERBackup);
 
     return retStatus;
 }
@@ -83,6 +87,7 @@ SYSCONFIG_WEAK bool SYSCFG_DL_restoreConfiguration(void)
 
 	retStatus &= DL_TimerG_restoreConfiguration(PWM_0_INST, &gPWM_0Backup, false);
 	retStatus &= DL_TimerA_restoreConfiguration(TIMER_TICK_INST, &gTIMER_TICKBackup, false);
+	retStatus &= DL_TimerG_restoreConfiguration(LINE_TIMER_INST, &gLINE_TIMERBackup, false);
 
     return retStatus;
 }
@@ -93,12 +98,14 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_GPIO_reset(GPIOB);
     DL_TimerG_reset(PWM_0_INST);
     DL_TimerA_reset(TIMER_TICK_INST);
+    DL_TimerG_reset(LINE_TIMER_INST);
     DL_UART_Main_reset(UART_0_INST);
 
     DL_GPIO_enablePower(GPIOA);
     DL_GPIO_enablePower(GPIOB);
     DL_TimerG_enablePower(PWM_0_INST);
     DL_TimerA_enablePower(TIMER_TICK_INST);
+    DL_TimerG_enablePower(LINE_TIMER_INST);
     DL_UART_Main_enablePower(UART_0_INST);
     delay_cycles(POWER_STARTUP_DELAY);
 }
@@ -305,6 +312,44 @@ SYSCONFIG_WEAK void SYSCFG_DL_TIMER_TICK_init(void) {
     DL_TimerA_enableInterrupt(TIMER_TICK_INST , DL_TIMERA_INTERRUPT_ZERO_EVENT);
 	NVIC_SetPriority(TIMER_TICK_INST_INT_IRQN, 3);
     DL_TimerA_enableClock(TIMER_TICK_INST);
+
+
+
+
+
+}
+
+/*
+ * Timer clock configuration to be sourced by BUSCLK /  (4000000 Hz)
+ * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
+ *   400000 Hz = 4000000 Hz / (8 * (9 + 1))
+ */
+static const DL_TimerG_ClockConfig gLINE_TIMERClockConfig = {
+    .clockSel    = DL_TIMER_CLOCK_BUSCLK,
+    .divideRatio = DL_TIMER_CLOCK_DIVIDE_8,
+    .prescale    = 9U,
+};
+
+/*
+ * Timer load value (where the counter starts from) is calculated as (timerPeriod * timerClockFreq) - 1
+ * LINE_TIMER_INST_LOAD_VALUE = (10 ms * 400000 Hz) - 1
+ */
+static const DL_TimerG_TimerConfig gLINE_TIMERTimerConfig = {
+    .period     = LINE_TIMER_INST_LOAD_VALUE,
+    .timerMode  = DL_TIMER_TIMER_MODE_PERIODIC,
+    .startTimer = DL_TIMER_START,
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_LINE_TIMER_init(void) {
+
+    DL_TimerG_setClockConfig(LINE_TIMER_INST,
+        (DL_TimerG_ClockConfig *) &gLINE_TIMERClockConfig);
+
+    DL_TimerG_initTimerMode(LINE_TIMER_INST,
+        (DL_TimerG_TimerConfig *) &gLINE_TIMERTimerConfig);
+    DL_TimerG_enableInterrupt(LINE_TIMER_INST , DL_TIMERG_INTERRUPT_ZERO_EVENT);
+	NVIC_SetPriority(LINE_TIMER_INST_INT_IRQN, 2);
+    DL_TimerG_enableClock(LINE_TIMER_INST);
 
 
 

@@ -4,6 +4,7 @@
 "./startup_mspm0g350x_ticlang.o"
 "./encoder.o"
 "./grayscale.o"
+"./line_follow.o"
 "./motor.o"
 "./speed_control.o"
 "./usart.o"

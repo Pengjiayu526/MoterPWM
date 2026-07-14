@@ -103,6 +103,11 @@ extern "C" {
 #define TIMER_TICK_INST_IRQHandler                              TIMA0_IRQHandler
 #define TIMER_TICK_INST_INT_IRQN                                (TIMA0_INT_IRQn)
 #define TIMER_TICK_INST_LOAD_VALUE                                       (7999U)
+/* Defines for LINE_TIMER */
+#define LINE_TIMER_INST                                                  (TIMG6)
+#define LINE_TIMER_INST_IRQHandler                              TIMG6_IRQHandler
+#define LINE_TIMER_INST_INT_IRQN                                (TIMG6_INT_IRQn)
+#define LINE_TIMER_INST_LOAD_VALUE                                       (3999U)
 
 
 
@@ -223,6 +228,7 @@ void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_0_init(void);
 void SYSCFG_DL_TIMER_TICK_init(void);
+void SYSCFG_DL_LINE_TIMER_init(void);
 void SYSCFG_DL_UART_0_init(void);
 
 

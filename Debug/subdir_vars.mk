@@ -15,6 +15,7 @@ C_SRCS += \
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/m0p/startup_system_files/ticlang/startup_mspm0g350x_ticlang.c \
 ../encoder.c \
 ../grayscale.c \
+../line_follow.c \
 ../motor.c \
 ../speed_control.c \
 ../usart.c 
@@ -34,6 +35,7 @@ C_DEPS += \
 ./startup_mspm0g350x_ticlang.d \
 ./encoder.d \
 ./grayscale.d \
+./line_follow.d \
 ./motor.d \
 ./speed_control.d \
 ./usart.d 
@@ -48,6 +50,7 @@ OBJS += \
 ./startup_mspm0g350x_ticlang.o \
 ./encoder.o \
 ./grayscale.o \
+./line_follow.o \
 ./motor.o \
 ./speed_control.o \
 ./usart.o 
@@ -64,6 +67,7 @@ OBJS__QUOTED += \
 "startup_mspm0g350x_ticlang.o" \
 "encoder.o" \
 "grayscale.o" \
+"line_follow.o" \
 "motor.o" \
 "speed_control.o" \
 "usart.o" 
@@ -80,6 +84,7 @@ C_DEPS__QUOTED += \
 "startup_mspm0g350x_ticlang.d" \
 "encoder.d" \
 "grayscale.d" \
+"line_follow.d" \
 "motor.d" \
 "speed_control.d" \
 "usart.d" 
@@ -96,6 +101,7 @@ C_SRCS__QUOTED += \
 "D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/m0p/startup_system_files/ticlang/startup_mspm0g350x_ticlang.c" \
 "../encoder.c" \
 "../grayscale.c" \
+"../line_follow.c" \
 "../motor.c" \
 "../speed_control.c" \
 "../usart.c" 
