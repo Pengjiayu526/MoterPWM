@@ -10,12 +10,15 @@ GEN_OPTS__FLAG := @"./device.opt"
 GEN_CMDS__FLAG := -Wl,-l"./device_linker.cmd" 
 
 ORDERED_OBJS += \
+"./I2C_communication.o" \
+"./IMU.o" \
 "./delay.o" \
 "./empty.o" \
 "./ti_msp_dl_config.o" \
 "./startup_mspm0g350x_ticlang.o" \
 "./encoder.o" \
 "./grayscale.o" \
+"./icm42688.o" \
 "./line_follow.o" \
 "./motor.o" \
 "./speed_control.o" \
@@ -123,28 +126,28 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-MoterNEW_Encode_PID_FollowLine.out 
+MoterNEW_Encode_PID_FollowLine_ICM.out 
 
 EXE_OUTPUTS__QUOTED += \
-"MoterNEW_Encode_PID_FollowLine.out" 
+"MoterNEW_Encode_PID_FollowLine_ICM.out" 
 
 
 # All Target
 all: $(OBJS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "MoterNEW_Encode_PID_FollowLine.out"
+	@$(MAKE) --no-print-directory -Onone "MoterNEW_Encode_PID_FollowLine_ICM.out"
 
 # Tool invocations
-MoterNEW_Encode_PID_FollowLine.out: $(OBJS) $(GEN_CMDS)
+MoterNEW_Encode_PID_FollowLine_ICM.out: $(OBJS) $(GEN_CMDS)
 	@echo 'Arm Linker - building target: "$@"'
-	"D:/ti/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/bin/tiarmclang.exe" @"device.opt"  -march=thumbv6m -mcpu=cortex-m0plus -mfloat-abi=soft -mlittle-endian -mthumb -O2 -gdwarf-3 -Wall -Wl,-m"MoterNEW_Encode_PID_FollowLine.map" -Wl,-i"D:/ti/mspm0_sdk_2_10_00_04/source" -Wl,-i"C:/Users/hp/workspace_ccstheia/MoterNEW_Encode_PID_FollowLine" -Wl,-i"C:/Users/hp/workspace_ccstheia/MoterNEW_Encode_PID_FollowLine/Debug/syscfg" -Wl,-i"D:/ti/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/lib" -Wl,--diag_wrap=off -Wl,--display_error_number -Wl,--warn_sections -Wl,--xml_link_info="MoterNEW_Encode_PID_FollowLine_linkInfo.xml" -Wl,--rom_model -o "MoterNEW_Encode_PID_FollowLine.out" $(ORDERED_OBJS)
+	"D:/ti/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/bin/tiarmclang.exe" @"device.opt"  -march=thumbv6m -mcpu=cortex-m0plus -mfloat-abi=soft -mlittle-endian -mthumb -O2 -gdwarf-3 -Wall -Wl,-m"MoterNEW_Encode_PID_FollowLine_ICM.map" -Wl,-i"D:/ti/mspm0_sdk_2_10_00_04/source" -Wl,-i"C:/Users/hp/workspace_ccstheia/MoterNEW_Encode_PID_FollowLine_ICM" -Wl,-i"C:/Users/hp/workspace_ccstheia/MoterNEW_Encode_PID_FollowLine_ICM/Debug/syscfg" -Wl,-i"D:/ti/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/lib" -Wl,--diag_wrap=off -Wl,--display_error_number -Wl,--warn_sections -Wl,--xml_link_info="MoterNEW_Encode_PID_FollowLine_ICM_linkInfo.xml" -Wl,--rom_model -o "MoterNEW_Encode_PID_FollowLine_ICM.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 
 # Other Targets
 clean:
 	-$(RM) $(GEN_MISC_FILES__QUOTED)$(GEN_FILES__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "delay.o" "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "encoder.o" "grayscale.o" "line_follow.o" "motor.o" "speed_control.o" "usart.o" 
-	-$(RM) "delay.d" "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "encoder.d" "grayscale.d" "line_follow.d" "motor.d" "speed_control.d" "usart.d" 
+	-$(RM) "I2C_communication.o" "IMU.o" "delay.o" "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "encoder.o" "grayscale.o" "icm42688.o" "line_follow.o" "motor.o" "speed_control.o" "usart.o" 
+	-$(RM) "I2C_communication.d" "IMU.d" "delay.d" "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "encoder.d" "grayscale.d" "icm42688.d" "line_follow.d" "motor.d" "speed_control.d" "usart.d" 
 	-@echo ' '
 
 .PHONY: all clean dependents

@@ -57,6 +57,8 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     SYSCFG_DL_PWM_0_init();
     SYSCFG_DL_TIMER_TICK_init();
     SYSCFG_DL_LINE_TIMER_init();
+    SYSCFG_DL_TIMER_0_init();
+    SYSCFG_DL_I2C_1_init();
     SYSCFG_DL_UART_0_init();
     /* Ensure backup structures have no valid state */
 	gPWM_0Backup.backupRdy 	= false;
@@ -99,6 +101,8 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_TimerG_reset(PWM_0_INST);
     DL_TimerA_reset(TIMER_TICK_INST);
     DL_TimerG_reset(LINE_TIMER_INST);
+    DL_TimerG_reset(TIMER_0_INST);
+    DL_I2C_reset(I2C_1_INST);
     DL_UART_Main_reset(UART_0_INST);
 
     DL_GPIO_enablePower(GPIOA);
@@ -106,6 +110,8 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_TimerG_enablePower(PWM_0_INST);
     DL_TimerA_enablePower(TIMER_TICK_INST);
     DL_TimerG_enablePower(LINE_TIMER_INST);
+    DL_TimerG_enablePower(TIMER_0_INST);
+    DL_I2C_enablePower(I2C_1_INST);
     DL_UART_Main_enablePower(UART_0_INST);
     delay_cycles(POWER_STARTUP_DELAY);
 }
@@ -117,6 +123,17 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
     DL_GPIO_enableOutput(GPIO_PWM_0_C0_PORT, GPIO_PWM_0_C0_PIN);
     DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_0_C1_IOMUX,GPIO_PWM_0_C1_IOMUX_FUNC);
     DL_GPIO_enableOutput(GPIO_PWM_0_C1_PORT, GPIO_PWM_0_C1_PIN);
+
+    DL_GPIO_initPeripheralInputFunctionFeatures(GPIO_I2C_1_IOMUX_SDA,
+        GPIO_I2C_1_IOMUX_SDA_FUNC, DL_GPIO_INVERSION_DISABLE,
+        DL_GPIO_RESISTOR_NONE, DL_GPIO_HYSTERESIS_DISABLE,
+        DL_GPIO_WAKEUP_DISABLE);
+    DL_GPIO_initPeripheralInputFunctionFeatures(GPIO_I2C_1_IOMUX_SCL,
+        GPIO_I2C_1_IOMUX_SCL_FUNC, DL_GPIO_INVERSION_DISABLE,
+        DL_GPIO_RESISTOR_NONE, DL_GPIO_HYSTERESIS_DISABLE,
+        DL_GPIO_WAKEUP_DISABLE);
+    DL_GPIO_enableHiZ(GPIO_I2C_1_IOMUX_SDA);
+    DL_GPIO_enableHiZ(GPIO_I2C_1_IOMUX_SCL);
 
     DL_GPIO_initPeripheralOutputFunction(
         GPIO_UART_0_IOMUX_TX, GPIO_UART_0_IOMUX_TX_FUNC);
@@ -357,6 +374,71 @@ SYSCONFIG_WEAK void SYSCFG_DL_LINE_TIMER_init(void) {
 
 }
 
+/*
+ * Timer clock configuration to be sourced by BUSCLK /  (4000000 Hz)
+ * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
+ *   40000 Hz = 4000000 Hz / (8 * (99 + 1))
+ */
+static const DL_TimerG_ClockConfig gTIMER_0ClockConfig = {
+    .clockSel    = DL_TIMER_CLOCK_BUSCLK,
+    .divideRatio = DL_TIMER_CLOCK_DIVIDE_8,
+    .prescale    = 99U,
+};
+
+/*
+ * Timer load value (where the counter starts from) is calculated as (timerPeriod * timerClockFreq) - 1
+ * TIMER_0_INST_LOAD_VALUE = (20 ms * 40000 Hz) - 1
+ */
+static const DL_TimerG_TimerConfig gTIMER_0TimerConfig = {
+    .period     = TIMER_0_INST_LOAD_VALUE,
+    .timerMode  = DL_TIMER_TIMER_MODE_PERIODIC,
+    .startTimer = DL_TIMER_START,
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_TIMER_0_init(void) {
+
+    DL_TimerG_setClockConfig(TIMER_0_INST,
+        (DL_TimerG_ClockConfig *) &gTIMER_0ClockConfig);
+
+    DL_TimerG_initTimerMode(TIMER_0_INST,
+        (DL_TimerG_TimerConfig *) &gTIMER_0TimerConfig);
+    DL_TimerG_enableInterrupt(TIMER_0_INST , DL_TIMERG_INTERRUPT_ZERO_EVENT);
+    DL_TimerG_enableClock(TIMER_0_INST);
+
+
+
+
+
+}
+
+
+static const DL_I2C_ClockConfig gI2C_1ClockConfig = {
+    .clockSel = DL_I2C_CLOCK_BUSCLK,
+    .divideRatio = DL_I2C_CLOCK_DIVIDE_1,
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_I2C_1_init(void) {
+
+    DL_I2C_setClockConfig(I2C_1_INST,
+        (DL_I2C_ClockConfig *) &gI2C_1ClockConfig);
+    DL_I2C_setAnalogGlitchFilterPulseWidth(I2C_1_INST,
+        DL_I2C_ANALOG_GLITCH_FILTER_WIDTH_50NS);
+    DL_I2C_enableAnalogGlitchFilter(I2C_1_INST);
+
+    /* Configure Controller Mode */
+    DL_I2C_resetControllerTransfer(I2C_1_INST);
+    /* Set frequency to 100000 Hz*/
+    DL_I2C_setTimerPeriod(I2C_1_INST, 31);
+    DL_I2C_setControllerTXFIFOThreshold(I2C_1_INST, DL_I2C_TX_FIFO_LEVEL_EMPTY);
+    DL_I2C_setControllerRXFIFOThreshold(I2C_1_INST, DL_I2C_RX_FIFO_LEVEL_BYTES_1);
+    DL_I2C_enableControllerClockStretching(I2C_1_INST);
+
+
+    /* Enable module */
+    DL_I2C_enableController(I2C_1_INST);
+
+
+}
 
 static const DL_UART_Main_ClockConfig gUART_0ClockConfig = {
     .clockSel    = DL_UART_MAIN_CLOCK_BUSCLK,

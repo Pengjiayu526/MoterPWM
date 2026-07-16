@@ -29,7 +29,27 @@
 #include "speed_control.h"
 #include "line_follow.h"
 #include <stdio.h>
+#include "icm42688.h"
+#include "IMU.h"
+#include "I2C_communication.h"
 
+float ypr[3];          // 上传yaw pitch roll的值
+/*
+ * IMU 调度标志与计数器
+ * ---------------------------------------------------------------
+ * g_imu_update_flag : 20 ms 定时器 ISR 置 1，主循环清 0。
+ *                     使用 volatile —— ISR 和主循环共享。
+ * g_imu_timer_count : 定时器 ISR 每 20 ms 递增一次（只增不减）。
+ * g_imu_missed_count : 上一次标志未被主循环处理时再次触发 ISR 的次数。
+ * g_imu_update_count : 主循环实际完成姿态更新的次数（static，非 volatile）。
+ */
+volatile uint8_t  g_imu_update_flag  = 0U;
+volatile uint32_t g_imu_timer_count  = 0U;
+volatile uint32_t g_imu_missed_count = 0U;
+
+static uint32_t g_imu_update_count  = 0U;
+static uint32_t g_imu_success_count = 0U;
+static uint32_t g_imu_error_count   = 0U;
 /*===========================================================================
  * 串口遥测周期: 200ms
  *
@@ -61,11 +81,50 @@ int fputs(const char *restrict s, FILE *restrict stream)
     }
     return char_len;
 }
-
 int puts(const char *_ptr)
 {
     return 0;
 }
+
+/*
+ * 陀螺仪定时器中断初始化
+ * 使能 TIMER_0 的 NVIC 中断
+ */
+void TimeA1_Init(void)
+{
+    NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);
+    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
+}
+
+/*
+陀螺仪定时器中断：周期20ms ， 中断内只设标志位，读取姿态角在主函数实现
+*/
+void TIMER_0_INST_IRQHandler(void)
+{
+	switch(DL_TimerG_getPendingInterrupt(TIMER_0_INST))
+	{
+		case DL_TIMER_IIDX_ZERO:
+			g_imu_timer_count++;
+
+			/*
+			 * 如果上一次任务标志尚未被主循环清除，
+			 * 说明主循环没有在一个 20 ms 周期内及时处理。
+			 */
+			if (g_imu_update_flag != 0U)
+			{
+				g_imu_missed_count++;
+			}
+
+			/* ISR 只发布任务，不执行任何 I²C 或姿态计算 */
+			g_imu_update_flag = 1U;
+			break;
+
+		default:
+			break;
+	}
+}
+
+
 
 /*===========================================================================
  * 主函数
@@ -99,7 +158,7 @@ int main(void)
 
     uint32_t telemetryTick = 0U;
     char     txBuf[256];
-
+    uint8_t printDivider = 0U;
     /*-----------------------------------------------------------------
      * 初始化顺序: 先关全局中断, 逐一初始化, 最后开中断
      *-----------------------------------------------------------------*/
@@ -113,6 +172,9 @@ int main(void)
     SpeedControl_Init();    /* 左右轮速度 PI 控制器初始化 */
     Encoder_Init();         /* 编码器 GPIO + TIMER_TICK (20ms) 中断初始化 */
 
+    IMU_init();
+	TimeA1_Init();
+    
     /*
      * 灰度循迹模块初始化
      * 必须在 SYSCFG_DL_init() 之后, __enable_irq() 之前。
@@ -154,47 +216,55 @@ int main(void)
             LineFollow_Update();
         }
 
-        /*-------------------------------------------------------------
-         * 200ms 串口遥测
-         *
-         * 每 20 个 10ms 周期 (即 200ms) 打印一次状态。
-         * 使用 telemetryTick 计数器而非 delay_ms, 避免阻塞主循环。
-         *
-         * 遥测格式:
-         *   GRAY BITMAP | ACTIVE | POS(milli) | ERR(milli) | TURN PPS |
-         *   TARGET L/R | SPEED L/R | PWM L/R | STATE
-         *
-         * 注意: 全部使用整数格式, 浮点值 ×1000 转 milli 单位,
-         *        避免 %f 增加代码体积和栈压力。
-         *-------------------------------------------------------------*/
-        telemetryTick++;
-        if (telemetryTick >= TELEMETRY_INTERVAL)
-        {
-            telemetryTick = 0U;
+        if (g_imu_update_flag != 0U)
+		{
+			/*
+			 * 必须先清标志，再执行阻塞任务。
+			 * 原因：如果 IMU 任务执行期间下一次 20 ms 中断到达，
+			 * ISR 会再次把标志置 1。先清标志可以保留这个新请求。
+			 */
+			g_imu_update_flag = 0U;
 
-            /* 浮点转整数 (毫单位), 避免 %f */
-            int32_t posMilli   = (int32_t)(LineFollow_GetFilteredPosition() * 1000.0f);
-            int32_t errorMilli = (int32_t)(LineFollow_GetError() * 1000.0f);
+			if (IMU_getYawPitchRoll(ypr) == 0)
+			{
+				g_imu_update_count++;
+				g_imu_success_count++;
+			}
+			else
+			{
+				/*
+				 * 失败时ypr保持上一帧值。
+				 */
+				g_imu_error_count++;
+			}
 
-            snprintf(
-                txBuf,
-                sizeof(txBuf),
-                "GRAY=0x%03X ACTIVE=%u POS=%ld ERR=%ld TURN=%ld "
-                "TARGET=%ld/%ld SPEED=%lu/%lu PWM=%d/%d STATE=%u\r\n",
-                (unsigned)LineFollow_GetSensorBitmap(),
-                (unsigned)LineFollow_GetActiveCount(),
-                (long)posMilli,
-                (long)errorMilli,
-                (long)LineFollow_GetTurnPPS(),
-                (long)LineFollow_GetLeftTargetPPS(),
-                (long)LineFollow_GetRightTargetPPS(),
-                (unsigned long)Encoder_GetSpeed(ENCODER_LEFT),
-                (unsigned long)Encoder_GetSpeed(ENCODER_RIGHT),
-                (int)SpeedControl_GetLeftPWM(),
-                (int)SpeedControl_GetRightPWM(),
-                (unsigned)LineFollow_GetState());
+			/* 5 × 20 ms = 100 ms，约 10 Hz 打印 */
+			printDivider++;
 
-            USART_SendString(txBuf);
-        }
+			if (printDivider >= 5U)
+			{
+				printDivider = 0U;
+
+				printf(
+					"%.2f-%.2f-%.2f "
+					"STATE=%u READY=%u "
+					"OFFSET=%.4f/%.4f/%.4f "
+					"TIMER=%lu UPDATE=%lu OK=%lu ERR=%lu MISS=%lu I2C=%d\r\n",
+					ypr[0],
+					ypr[1],
+					ypr[2],
+					(unsigned)IMU_GetState(),
+					(unsigned)IMU_IsReady(),
+					IMU_GetGyroOffsetX(),
+					IMU_GetGyroOffsetY(),
+					IMU_GetGyroOffsetZ(),
+					(unsigned long)g_imu_timer_count,
+					(unsigned long)g_imu_update_count,
+					(unsigned long)g_imu_success_count,
+					(unsigned long)g_imu_error_count,
+					(unsigned long)g_imu_missed_count,
+					(int)I2C_GetLastResult());
+			}
+		}
     }
 }

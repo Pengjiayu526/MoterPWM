@@ -1,6 +1,6 @@
 # FIXED
 
-empty.o: ../empty.c \
+icm42688.o: ../icm42688.c ../icm42688.h ../delay.h \
  ti_msp_dl_config.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h \
@@ -84,8 +84,9 @@ empty.o: ../empty.c \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/dl_wwdt.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h \
  D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h \
- ../motor.h ../encoder.h ../usart.h ../grayscale.h ../speed_control.h \
- ../line_follow.h ../icm42688.h ../IMU.h ../I2C_communication.h
+ ../I2C_communication.h
+../icm42688.h:
+../delay.h:
 ti_msp_dl_config.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h:
@@ -169,12 +170,4 @@ D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/dl_vref.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/dl_wwdt.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h:
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h:
-../motor.h:
-../encoder.h:
-../usart.h:
-../grayscale.h:
-../speed_control.h:
-../line_follow.h:
-../icm42688.h:
-../IMU.h:
 ../I2C_communication.h:

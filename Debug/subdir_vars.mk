@@ -9,12 +9,15 @@ SYSCFG_SRCS += \
 ../empty.syscfg 
 
 C_SRCS += \
+../I2C_communication.c \
+../IMU.c \
 ../delay.c \
 ../empty.c \
 ./ti_msp_dl_config.c \
 D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/m0p/startup_system_files/ticlang/startup_mspm0g350x_ticlang.c \
 ../encoder.c \
 ../grayscale.c \
+../icm42688.c \
 ../line_follow.c \
 ../motor.c \
 ../speed_control.c \
@@ -29,12 +32,15 @@ GEN_FILES += \
 ./ti_msp_dl_config.c 
 
 C_DEPS += \
+./I2C_communication.d \
+./IMU.d \
 ./delay.d \
 ./empty.d \
 ./ti_msp_dl_config.d \
 ./startup_mspm0g350x_ticlang.d \
 ./encoder.d \
 ./grayscale.d \
+./icm42688.d \
 ./line_follow.d \
 ./motor.d \
 ./speed_control.d \
@@ -44,12 +50,15 @@ GEN_OPTS += \
 ./device.opt 
 
 OBJS += \
+./I2C_communication.o \
+./IMU.o \
 ./delay.o \
 ./empty.o \
 ./ti_msp_dl_config.o \
 ./startup_mspm0g350x_ticlang.o \
 ./encoder.o \
 ./grayscale.o \
+./icm42688.o \
 ./line_follow.o \
 ./motor.o \
 ./speed_control.o \
@@ -61,12 +70,15 @@ GEN_MISC_FILES += \
 ./Event.dot 
 
 OBJS__QUOTED += \
+"I2C_communication.o" \
+"IMU.o" \
 "delay.o" \
 "empty.o" \
 "ti_msp_dl_config.o" \
 "startup_mspm0g350x_ticlang.o" \
 "encoder.o" \
 "grayscale.o" \
+"icm42688.o" \
 "line_follow.o" \
 "motor.o" \
 "speed_control.o" \
@@ -78,12 +90,15 @@ GEN_MISC_FILES__QUOTED += \
 "Event.dot" 
 
 C_DEPS__QUOTED += \
+"I2C_communication.d" \
+"IMU.d" \
 "delay.d" \
 "empty.d" \
 "ti_msp_dl_config.d" \
 "startup_mspm0g350x_ticlang.d" \
 "encoder.d" \
 "grayscale.d" \
+"icm42688.d" \
 "line_follow.d" \
 "motor.d" \
 "speed_control.d" \
@@ -95,12 +110,15 @@ GEN_FILES__QUOTED += \
 "ti_msp_dl_config.c" 
 
 C_SRCS__QUOTED += \
+"../I2C_communication.c" \
+"../IMU.c" \
 "../delay.c" \
 "../empty.c" \
 "./ti_msp_dl_config.c" \
 "D:/ti/mspm0_sdk_2_10_00_04/source/ti/devices/msp/m0p/startup_system_files/ticlang/startup_mspm0g350x_ticlang.c" \
 "../encoder.c" \
 "../grayscale.c" \
+"../icm42688.c" \
 "../line_follow.c" \
 "../motor.c" \
 "../speed_control.c" \

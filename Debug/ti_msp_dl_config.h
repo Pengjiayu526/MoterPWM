@@ -108,7 +108,28 @@ extern "C" {
 #define LINE_TIMER_INST_IRQHandler                              TIMG6_IRQHandler
 #define LINE_TIMER_INST_INT_IRQN                                (TIMG6_INT_IRQn)
 #define LINE_TIMER_INST_LOAD_VALUE                                       (3999U)
+/* Defines for TIMER_0 */
+#define TIMER_0_INST                                                     (TIMG0)
+#define TIMER_0_INST_IRQHandler                                 TIMG0_IRQHandler
+#define TIMER_0_INST_INT_IRQN                                   (TIMG0_INT_IRQn)
+#define TIMER_0_INST_LOAD_VALUE                                           (799U)
 
+
+
+
+/* Defines for I2C_1 */
+#define I2C_1_INST                                                          I2C1
+#define I2C_1_INST_IRQHandler                                    I2C1_IRQHandler
+#define I2C_1_INST_INT_IRQN                                        I2C1_INT_IRQn
+#define I2C_1_BUS_SPEED_HZ                                                100000
+#define GPIO_I2C_1_SDA_PORT                                                GPIOB
+#define GPIO_I2C_1_SDA_PIN                                         DL_GPIO_PIN_3
+#define GPIO_I2C_1_IOMUX_SDA                                     (IOMUX_PINCM16)
+#define GPIO_I2C_1_IOMUX_SDA_FUNC                      IOMUX_PINCM16_PF_I2C1_SDA
+#define GPIO_I2C_1_SCL_PORT                                                GPIOB
+#define GPIO_I2C_1_SCL_PIN                                         DL_GPIO_PIN_2
+#define GPIO_I2C_1_IOMUX_SCL                                     (IOMUX_PINCM15)
+#define GPIO_I2C_1_IOMUX_SCL_FUNC                      IOMUX_PINCM15_PF_I2C1_SCL
 
 
 /* Defines for UART_0 */
@@ -229,6 +250,8 @@ void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_0_init(void);
 void SYSCFG_DL_TIMER_TICK_init(void);
 void SYSCFG_DL_LINE_TIMER_init(void);
+void SYSCFG_DL_TIMER_0_init(void);
+void SYSCFG_DL_I2C_1_init(void);
 void SYSCFG_DL_UART_0_init(void);
 
 
